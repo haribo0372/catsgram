@@ -18,8 +18,7 @@ public class UserController {
 
     @GetMapping
     public Collection<User> findAll() {
-        Collection<User> all = users.values();
-        return all.isEmpty() ? null : all;
+        return users.values();
     }
 
     @PostMapping
