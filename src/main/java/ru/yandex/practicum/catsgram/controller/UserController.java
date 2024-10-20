@@ -1,68 +1,55 @@
 package ru.yandex.practicum.catsgram.controller;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.catsgram.exception.ConditionsNotMetException;
-import ru.yandex.practicum.catsgram.exception.DuplicatedDataException;
-import ru.yandex.practicum.catsgram.model.User;
 
-import java.time.Instant;
+import ru.yandex.practicum.catsgram.model.User;
+import ru.yandex.practicum.catsgram.service.UserService;
+
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
+
 
 @RestController
 @RequestMapping("/users")
+@RequiredArgsConstructor
 public class UserController {
-    private final Map<Long, User> users = new HashMap<>();
+    private final UserService userService;
 
     @GetMapping
     public Collection<User> findAll() {
-        return users.values();
+        return userService.findAll();
+    }
+
+    @GetMapping("/{userId}")
+    public Optional<User> getUserById(@PathVariable("userId") Long userId) {
+        return userService.findById(userId);
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public User create(@RequestBody User user) {
-        if (user.getEmail() == null || user.getEmail().isBlank())
-            throw new ConditionsNotMetException("Имейл должен быть указан");
-
-        findByEmail(user.getEmail()).ifPresent(i -> {
-            throw new DuplicatedDataException("Этот имейл уже используется");
-        });
-
-        user.setId(getNextId());
-        user.setRegistrationDate(Instant.now());
-        users.put(user.getId(), user);
-
-        return user;
+        return userService.create(user);
     }
 
     @PutMapping
     public User update(@RequestBody User user) {
-        if (user.getId() == null)
-            throw new ConditionsNotMetException("Id должен быть указан");
-
-        findByEmail(user.getEmail()).ifPresent(i -> {
-            if (!i.equals(user))
-                throw new DuplicatedDataException("Этот имейл уже используется");
-        });
-
-        if (user.getEmail() == null || user.getUsername() == null || user.getPassword() == null)
-            return user;
-
-        users.put(user.getId(), user);
-        return user;
+        return userService.update(user);
     }
 
-    private Optional<User> findByEmail(String email) {
-        return users.values().stream().filter(i -> i.getEmail().equals(email)).findAny();
+    @PostMapping(value = "/test", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<User> testJson() {
+        User user = new User();
+        user.setUsername("alfred");
+        return new ResponseEntity<>(user, HttpStatus.OK);
     }
 
-    private long getNextId() {
-        long currentMaxUserId = users.keySet()
-                .stream()
-                .mapToLong(id -> id).max()
-                .orElse(0);
-        return ++currentMaxUserId;
+    @PostMapping(value = "/test", produces = MediaType.APPLICATION_XML_VALUE)
+    @ResponseBody
+    public String testXml() {
+        return "that message for you, XML";
     }
 }
